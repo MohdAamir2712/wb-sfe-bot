@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>WB SFE Support Bot</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --wb-navy: #0f2547;
+    --wb-blue: #1a56db;
+    --wb-sky: #e8f0fd;
+    --surface: #ffffff;
+    --bg: #f1f5fb;
+    --border: #dde4f0;
+    --text: #1e293b;
+    --muted: #64748b;
+  }
+  html, body { height: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); }
+  .shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 900px;
+    margin: 0 auto;
+    background: var(--surface);
+    box-shadow: 0 0 40px rgba(15, 37, 71, 0.1);
+  }
+  .header {
+    background: var(--wb-navy);
+    color: white;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .header h1 { font-size: 16px; margin: 0; }
+  .header p { font-size: 12px; opacity: 0.8; margin: 2px 0 0 0; }
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .msg { display: flex; gap: 10px; margin-bottom: 10px; }
+  .msg.user { flex-direction: row-reverse; }
+  .avatar { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .bot-avatar { background: var(--wb-sky); }
+  .user-avatar { background: var(--wb-blue); color: white; }
+  .bubble {
+    max-width: 70%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    word-break: break-word;
+    line-height: 1.5;
+  }
+  .msg.bot .bubble { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+  .msg.user .bubble { background: var(--wb-blue); color: white; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 20px; }
+  .chip {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: white;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+  .chip:hover { background: var(--wb-sky); border-color: var(--wb-blue); }
+  .input-area { border-top: 1px solid var(--border); padding: 12px 20px; display: flex; gap: 10px; }
+  textarea { flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-family: inherit; resize: none; max-height: 100px; }
+  textarea:focus { outline: none; border-color: var(--wb-blue); }
+  button { padding: 10px 20px; background: var(--wb-blue); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+  button:hover { background: var(--wb-navy); }
+  button:disabled { background: var(--border); cursor: not-allowed; }
+  .footer { padding: 10px; text-align: center; font-size: 11px; color: var(--muted); border-top: 1px solid var(--border); }
+
+  /* Modal */
+  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+  .modal.show { display: flex; }
+  .modal-content { background: white; padding: 40px; border-radius: 12px; max-width: 400px; width: 90%; }
+  .modal-content h2 { font-size: 20px; margin-bottom: 20px; color: var(--wb-navy); }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+  .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; }
+  .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--wb-blue); }
+  .modal-btn { width: 100%; padding: 12px; background: var(--wb-blue); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; }
+  .modal-btn:hover { background: var(--wb-navy); }
+  .error { color: #dc2626; font-size: 12px; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="header">
+    <div>🤖</div>
+    <div>
+      <h1>WB SFE / CRM Support Bot</h1>
+      <p>Walter Bushnell · Field Force Assistant</p>
+    </div>
+  </div>
+
+  <div class="chat-area" id="chat"></div>
+
+  <div class="chips" id="chips-area">
+    <button class="chip" onclick="addMsg('DCR Issue')">📋 DCR Issue</button>
+    <button class="chip" onclick="addMsg('MSL Issue')">🏥 MSL Issue</button>
+    <button class="chip" onclick="addMsg('MTP Issue')">📅 MTP Issue</button>
+    <button class="chip" onclick="addMsg('STP Issue')">🗺️ STP Issue</button>
+    <button class="chip" onclick="addMsg('Expense Issue')">💰 Expense Issue</button>
+    <button class="chip" onclick="addMsg('Leave Issue')">🏖️ Leave Issue</button>
+    <button class="chip" onclick="addMsg('ESSR Issue')">📊 ESSR Issue</button>
+    <button class="chip" onclick="addMsg('Other Issues')">❓ Other Issues</button>
+  </div>
+
+  <div class="input-area">
+    <textarea id="input" placeholder="Type your message..." onkeypress="if(event.key=='Enter'&&!event.shiftKey){send();event.preventDefault();}"></textarea>
+    <button onclick="send()">Send</button>
+  </div>
+
+  <div class="footer">SFE Support Team · Walter Bushnell · sfesupport@walterbushnell.com</div>
+</div>
+
+<!-- Modal Form -->
+<div class="modal show" id="modal">
+  <div class="modal-content">
+    <h2>🙏 Welcome to WB SFE Support</h2>
+    <p style="font-size: 13px; color: var(--muted); margin-bottom: 24px;">Please enter your details to get started</p>
+
+    <div class="form-group">
+      <label>Email ID</label>
+      <input type="email" id="email" placeholder="your.email@walterbushnell.com">
+      <div class="error" id="email-error"></div>
+    </div>
+
+    <div class="form-group">
+      <label>Division</label>
+      <select id="division">
+        <option value="">-- Select Division --</option>
+        <option value="IT Division">IT Division</option>
+        <option value="Sales Division">Sales Division</option>
+        <option value="Marketing Division">Marketing Division</option>
+        <option value="Operations Division">Operations Division</option>
+        <option value="Finance Division">Finance Division</option>
+        <option value="HR Division">HR Division</option>
+        <option value="Other">Other</option>
+      </select>
+      <div class="error" id="division-error"></div>
+    </div>
+
+    <div class="form-group">
+      <label>Headquarters (HQ)</label>
+      <input type="text" id="hq" placeholder="e.g., Mumbai HQ">
+      <div class="error" id="hq-error"></div>
+    </div>
+
+    <button class="modal-btn" onclick="submitForm()">Continue to Chat</button>
+  </div>
+</div>
+
+<script>
+const chat = document.getElementById('chat');
+const input = document.getElementById('input');
+const modal = document.getElementById('modal');
+
+let userEmail = '';
+let userDivision = '';
+let userHQ = '';
+
+function submitForm() {
+  const email = document.getElementById('email').value.trim();
+  const division = document.getElementById('division').value;
+  const hq = document.getElementById('hq').value.trim();
+
+  document.getElementById('email-error').textContent = '';
+  document.getElementById('division-error').textContent = '';
+  document.getElementById('hq-error').textContent = '';
+
+  let hasError = false;
+
+  if (!email || !email.includes('@')) {
+    document.getElementById('email-error').textContent = 'Please enter a valid email';
+    hasError = true;
+  }
+
+  if (!division) {
+    document.getElementById('division-error').textContent = 'Please select a division';
+    hasError = true;
+  }
+
+  if (!hq) {
+    document.getElementById('hq-error').textContent = 'Please enter your HQ';
+    hasError = true;
+  }
+
+  if (hasError) return;
+
+  userEmail = email;
+  userDivision = division;
+  userHQ = hq;
+
+  modal.classList.remove('show');
+  showBot(`✅ Great! Your details are saved:\n📧 Email: ${email}\n🏢 Division: ${division}\n📍 HQ: ${hq}\n\nNow, how can I help you today?`);
+}
+
+function showBot(text) {
+  const div = document.createElement('div');
+  div.className = 'msg bot';
+  div.innerHTML = `<div class="avatar bot-avatar">🤖</div><div class="bubble">${text.split('\n').join('<br>')}</div>`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function showUser(text) {
+  const div = document.createElement('div');
+  div.className = 'msg user';
+  div.innerHTML = `<div class="avatar user-avatar">👤</div><div class="bubble">${text}</div>`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function addMsg(text) {
+  input.value = text;
+  input.focus();
+}
+
+async function send() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  showUser(text);
+
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'msg bot';
+  typingDiv.innerHTML = `<div class="avatar bot-avatar">🤖</div><div class="bubble" style="padding:8px">Thinking...</div>`;
+  chat.appendChild(typingDiv);
+  chat.scrollTop = chat.scrollHeight;
+
+  try {
+    const systemMsg = `You are SFE/ESSR support for Walter Bushnell. User: ${userEmail}, Division: ${userDivision}, HQ: ${userHQ}
+
+Help with: DCR unlock (within 72 hrs, SM approval needed), MSL/doctor addition, MTP monthly planning, STP routes, Expense claims (1st & 2nd fortnight), Leave (PL min 4 days), ESSR login/data.
+
+For Red Errors or unknown issues, say: "Please email sfesupport@walterevolution.com with screenshot and details."
+
+Keep replies short, helpful, in Hinglish when possible.`;
+
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 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' },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: systemMsg },
+          { role: 'user', content: text }
+        ],
+        temperature: 0.4,
+        max_tokens: 350
+      })
+    });
+
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || 'Sorry, could not get a response.';
+
+    typingDiv.remove();
+    showBot(reply);
+  } catch(err) {
+    typingDiv.remove();
+    showBot('⚠️ Error: ' + err.message);
+  }
+}
+
+document.getElementById('email').addEventListener('keypress', function(e) {
+  if(e.key === 'Enter') submitForm();
+});
+document.getElementById('hq').addEventListener('keypress', function(e) {
+  if(e.key === 'Enter') submitForm();
+});
+</script>
+
+</body>
+</html>
